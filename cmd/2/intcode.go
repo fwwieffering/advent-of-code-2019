@@ -6,10 +6,12 @@ import (
 	"strings"
 )
 
+// Program holds a program
 type Program struct {
 	InitialMemory []int
 }
 
+// Run runs a program
 func (p *Program) Run(input1 int, input2 int) ([]int, error) {
 	memoryCopy := make([]int, len(p.InitialMemory))
 	copy(memoryCopy, p.InitialMemory)
@@ -85,6 +87,7 @@ func convertIntCodeString(intCode []int) string {
 	return strings.TrimRight(s, ",")
 }
 
+// RunProgram runs a program
 func RunProgram(intCode []int) ([]int, error) {
 	i := 0
 	for i < len(intCode) {

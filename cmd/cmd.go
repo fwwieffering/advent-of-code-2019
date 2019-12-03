@@ -2,6 +2,7 @@ package cmd
 
 import (
 	two "advent-of-code-2019/cmd/2"
+	three "advent-of-code-2019/cmd/3"
 	"fmt"
 	"os"
 
@@ -20,6 +21,7 @@ var rootCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(one.One)
 	rootCmd.AddCommand(two.Two)
+	rootCmd.AddCommand(three.Three)
 }
 
 // Execute is the entrypoint for all commands
