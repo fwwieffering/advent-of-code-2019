@@ -13,6 +13,7 @@ Usage:
   advent [command]
 
 Available Commands:
+  four        runs day 4 of advent of code
   help        Help about any command
   one         one runs advent of code problem one https://adventofcode.com/2019/day/1
   three       runs day three of advent of code
@@ -20,6 +21,4 @@ Available Commands:
 
 Flags:
   -h, --help   help for advent
-
-Use "advent [command] --help" for more information about a command.
 ```
