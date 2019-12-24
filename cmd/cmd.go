@@ -2,6 +2,7 @@ package cmd
 
 import (
 	two "advent-of-code-2019/cmd/2"
+	five "advent-of-code-2019/cmd/5"
 	three "advent-of-code-2019/cmd/3"
 	four "advent-of-code-2019/cmd/4"
 	"fmt"
@@ -24,6 +25,7 @@ func init() {
 	rootCmd.AddCommand(two.Two)
 	rootCmd.AddCommand(three.Three)
 	rootCmd.AddCommand(four.Four)
+	rootCmd.AddCommand(five.Five)
 }
 
 // Execute is the entrypoint for all commands
