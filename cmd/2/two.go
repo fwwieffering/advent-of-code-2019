@@ -2,6 +2,7 @@ package two
 
 import (
 	"advent-of-code-2019/logger"
+	"advent-of-code-2019/utils"
 
 	"github.com/spf13/cobra"
 )
@@ -56,22 +57,25 @@ var Two = &cobra.Command{
 }
 
 func two(cmd *cobra.Command, args []string) {
-	i, err := convertStringIntCode(input)
+	initialMemory, err := utils.StringToIntArray(input)
 	if err != nil {
-		logger.Fatalf("Unable to parse input: %s", err.Error())
+		panic(err)
 	}
+
 	//To do this, before running the program, replace position 1 with the value 12
 	// and replace position 2 with the value 2. What value is left at position 0 after the program halts?
-
-	p := &Program{
-		InitialMemory: i,
+	part1Mem := utils.CopyIntArray(initialMemory)
+	part1Mem[1] = 12
+	part1Mem[2] = 2
+	p := &utils.Program{
+		InitialMemory: part1Mem,
 	}
 	part1Res, err := p.Run(12, 2)
 	if err != nil {
 		logger.Fatalf("Error running intcode program: %s", err.Error())
 	}
 
-	logger.Infof("(part one): %s", convertIntCodeString(part1Res))
+	logger.Infof("(part one): %s", part1Res)
 
 	// Find the input noun and verb that cause the program to produce the output 19690720.
 	// What is 100 * noun + verb? (For example, if noun=12 and verb=2, the answer would be 1202.)
@@ -81,6 +85,9 @@ func two(cmd *cobra.Command, args []string) {
 	found := false
 	for i := 0; i <= 99; i++ {
 		for j := 0; j <= 99; j++ {
+			memCopy := utils.CopyIntArray(initialMemory)
+			memCopy[1] = i
+			memCopy[2] = j
 			res, err := p.Run(i, j)
 			if err != nil {
 				logger.Fatalf("Error running program for inputs (%d, %d): %s", i, j, err.Error())
