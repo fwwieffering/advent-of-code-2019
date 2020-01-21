@@ -2,13 +2,24 @@ package utils
 
 import (
 	"fmt"
+	"log"
+	"os"
 )
 
 // Program holds a program
 type Program struct {
 	Input         []int
+	InputChan     chan int
+	OutputChan    chan int
+	inputCounter  int
 	Result        int
 	InitialMemory []int
+}
+
+type ExecutionResult struct {
+	Memory []int
+	Value  int
+	Error  error
 }
 
 type parameterMode int
@@ -52,14 +63,14 @@ func (prm *parameter) getValue(intcode []int) int {
 type VMCommand struct {
 	Name         string
 	CommandCode  int
-	Operation    func(program *Program, ptr int, memory []int, parameters []*parameter) int
+	Operation    func(program *Program, ptr int, memory []int, parameters []*parameter, logger *log.Logger) (int, error)
 	NumberParams int
 }
 
 var (
 	AddCMD = &VMCommand{
 		Name: "Add",
-		Operation: func(p *Program, ptr int, memory []int, params []*parameter) int {
+		Operation: func(p *Program, ptr int, memory []int, params []*parameter, logger *log.Logger) (int, error) {
 			res := 0
 			for _, p := range params {
 				res += p.getValue(memory)
@@ -67,14 +78,14 @@ var (
 			// output position is after param
 			outputPosition := memory[params[len(params)-1].position+1]
 			memory[outputPosition] = res
-			return ptr + 4
+			return ptr + 4, nil
 		},
 		CommandCode:  1,
 		NumberParams: 2,
 	}
 	MultiplyCMD = &VMCommand{
 		Name: "Multiply",
-		Operation: func(p *Program, ptr int, memory []int, params []*parameter) int {
+		Operation: func(p *Program, ptr int, memory []int, params []*parameter, logger *log.Logger) (int, error) {
 			result := 0
 			for idx, p := range params {
 				if idx == 0 {
@@ -86,61 +97,82 @@ var (
 			// output position is after param
 			outputPosition := memory[params[len(params)-1].position+1]
 			memory[outputPosition] = result
-			return ptr + 4
+			return ptr + 4, nil
 		},
 		CommandCode:  2,
 		NumberParams: 2,
 	}
 	ReplaceCMD = &VMCommand{
 		Name: "Replace",
-		Operation: func(p *Program, ptr int, memory []int, params []*parameter) int {
-			fmt.Printf("input command at %d. Input value %d\n", ptr, p.Input[0])
-			input := p.Input[0]
+		Operation: func(p *Program, ptr int, memory []int, params []*parameter, logger *log.Logger) (int, error) {
+			var val int
+			// input could be from array or channel
+			if p.InputChan != nil {
+				// this can block
+				val = <-p.InputChan
+			} else {
+				// catch errors
+				if p.inputCounter > (len(p.Input) - 1) {
+					return 0, fmt.Errorf("not enough input for input instruction. on %d input command but only %d inputs provided",
+						p.inputCounter+1, len(p.Input))
+				}
+				val = p.Input[p.inputCounter]
+			}
+			p.inputCounter++
 			position := memory[params[0].position]
-			memory[position] = input
-			return ptr + 2
+			memory[position] = val
+			// if logger != nil {
+			// 	logger.Printf("input command at %d. Input value %d. Input #%d\n", ptr, val, p.inputCounter)
+			// }
+
+			return ptr + 2, nil
 		},
 		CommandCode:  3,
 		NumberParams: 1,
 	}
 	OutputCMD = &VMCommand{
 		Name: "Output",
-		Operation: func(p *Program, ptr int, memory []int, params []*parameter) int {
+		Operation: func(p *Program, ptr int, memory []int, params []*parameter, logger *log.Logger) (int, error) {
 			val := params[0].getValue(memory)
-			fmt.Printf("output cmd at %d. Value: %d\n", params[0].position, val)
 			p.Result = val
-			return ptr + 2
+			if p.OutputChan != nil {
+				p.OutputChan <- val
+			}
+			// if logger != nil {
+			// 	logger.Printf("output cmd at %d. Value: %d\n", params[0].position, val)
+			// }
+			return ptr + 2, nil
 		},
 		CommandCode:  4,
 		NumberParams: 1,
 	}
 	JumpIfTrueCMD = &VMCommand{
 		Name: "JumpIfTrue",
-		Operation: func(p *Program, ptr int, memory []int, params []*parameter) int {
+		Operation: func(p *Program, ptr int, memory []int, params []*parameter, logger *log.Logger) (int, error) {
 			isTrue := params[0].getValue(memory) != 0
 			if isTrue {
-				return params[1].getValue(memory)
+				return params[1].getValue(memory), nil
 			}
-			return ptr + 3
+			return ptr + 3, nil
 		},
 		CommandCode:  5,
 		NumberParams: 2,
 	}
 	JumpIfFalseCMD = &VMCommand{
 		Name: "JumpIfFalse",
-		Operation: func(p *Program, ptr int, memory []int, params []*parameter) int {
+		Operation: func(p *Program, ptr int, memory []int, params []*parameter, logger *log.Logger) (int, error) {
 			isFalse := params[0].getValue(memory) == 0
 			if isFalse {
-				return params[1].getValue(memory)
+				return params[1].getValue(memory), nil
 			}
-			return ptr + 3
+			return ptr + 3, nil
 		},
 		CommandCode:  6,
 		NumberParams: 2,
 	}
 	LessThan = &VMCommand{
 		Name: "LessThan",
-		Operation: func(p *Program, ptr int, memory []int, params []*parameter) int {
+		Operation: func(p *Program, ptr int, memory []int, params []*parameter, logger *log.Logger) (int, error) {
 			firstVal := params[0].getValue(memory)
 			secondVal := params[1].getValue(memory)
 			if firstVal < secondVal {
@@ -148,14 +180,14 @@ var (
 			} else {
 				memory[memory[params[2].position]] = 0
 			}
-			return ptr + 4
+			return ptr + 4, nil
 		},
 		CommandCode:  7,
 		NumberParams: 3,
 	}
 	Equals = &VMCommand{
 		Name: "Equals",
-		Operation: func(p *Program, ptr int, memory []int, params []*parameter) int {
+		Operation: func(p *Program, ptr int, memory []int, params []*parameter, logger *log.Logger) (int, error) {
 			firstVal := params[0].getValue(memory)
 			secondVal := params[1].getValue(memory)
 			if firstVal == secondVal {
@@ -163,7 +195,7 @@ var (
 			} else {
 				memory[memory[params[2].position]] = 0
 			}
-			return ptr + 4
+			return ptr + 4, nil
 		},
 		CommandCode:  8,
 		NumberParams: 3,
@@ -212,6 +244,7 @@ func (p *Program) Run(input ...int) ([]int, error) {
 	memCopy := CopyIntArray(p.InitialMemory)
 	i := 0
 	p.Input = input
+	p.inputCounter = 0
 	for i < len(memCopy) {
 		cmd, params, err := commandParse(memCopy, i)
 		if err != nil {
@@ -221,10 +254,47 @@ func (p *Program) Run(input ...int) ([]int, error) {
 		if cmd.CommandCode == 99 {
 			break
 		}
-		newPtr := cmd.Operation(p, i, memCopy, params)
+		newPtr, err := cmd.Operation(p, i, memCopy, params, nil)
+		if err != nil {
+			return nil, fmt.Errorf("error at %d: %s", i, err.Error())
+		}
 		i = newPtr
 	}
 	return memCopy, nil
+}
+
+func (p Program) RunAsync(identifier string, inputchan chan int, outputchan chan int, resultChan chan ExecutionResult) {
+	copyP := &Program{
+		InitialMemory: p.InitialMemory,
+		InputChan:     inputchan,
+		OutputChan:    outputchan,
+	}
+	var lgr *log.Logger
+	lgr = log.New(os.Stdout, fmt.Sprintf("%s :", identifier), 0)
+
+	memCopy := CopyIntArray(p.InitialMemory)
+	i := 0
+	for i < len(memCopy) {
+		cmd, params, err := commandParse(memCopy, i)
+		if err != nil {
+			resultChan <- ExecutionResult{Error: err}
+		}
+
+		if cmd.CommandCode == 99 {
+			break
+		}
+		newPtr, err := cmd.Operation(copyP, i, memCopy, params, lgr)
+		if err != nil {
+			resultChan <- ExecutionResult{Error: fmt.Errorf("error at %d: %s", i, err.Error())}
+		}
+		i = newPtr
+	}
+	res := ExecutionResult{
+		Memory: memCopy,
+		Value:  copyP.Result,
+	}
+
+	resultChan <- res
 }
 
 func NewProgram(initialMemory string) (*Program, error) {
