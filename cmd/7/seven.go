@@ -40,12 +40,12 @@ func runSequence(p *utils.Program, sequence []int) (int, error) {
 	// first inputsignal is always 0
 	var inputsignal = 0
 	for _, phaseSetting := range sequence {
-		_, err := p.Run(phaseSetting, inputsignal)
+		res, err := p.Run(phaseSetting, inputsignal)
 		if err != nil {
 			return 0, err
 		}
 		// chain inputsignal for next amp
-		inputsignal = p.Result
+		inputsignal = res.Result[0]
 	}
 	// output of last program is the answer
 	return inputsignal, nil
@@ -53,7 +53,6 @@ func runSequence(p *utils.Program, sequence []int) (int, error) {
 
 func runSequenceFeedback(p *utils.Program, sequence []int) (int, error) {
 	type progExec struct {
-		program    *utils.Program
 		inputChan  chan int
 		outputChan chan int
 	}
@@ -83,7 +82,6 @@ func runSequenceFeedback(p *utils.Program, sequence []int) (int, error) {
 		}
 
 		runList[i] = progExec{
-			program:    p,
 			inputChan:  ipt,
 			outputChan: opt,
 		}
@@ -94,14 +92,15 @@ func runSequenceFeedback(p *utils.Program, sequence []int) (int, error) {
 
 	errstr := ""
 	var answer int
+	var res utils.ExecutionResult
 	for i := 0; i < len(runList); i++ {
-		res := <-resultChan
+		res = <-resultChan
 		// fmt.Printf("result: %+v\n", res)
 		if res.Error != nil {
 			errstr += res.Error.Error() + "\n"
 		}
-		answer = res.Value
 	}
+	answer = res.Result[len(res.Result)-1]
 	var err error
 	if len(errstr) > 0 {
 		err = fmt.Errorf(errstr)

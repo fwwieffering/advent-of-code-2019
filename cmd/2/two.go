@@ -92,7 +92,7 @@ func two(cmd *cobra.Command, args []string) {
 			if err != nil {
 				logger.Fatalf("Error running program for inputs (%d, %d): %s", i, j, err.Error())
 			}
-			if res[0] == answer {
+			if res.Result[0] == answer {
 				a = i
 				b = j
 				found = true

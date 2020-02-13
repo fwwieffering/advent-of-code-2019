@@ -35,11 +35,11 @@ func five(cmd *cobra.Command, args []string) {
 		InitialMemory: intMem,
 	}
 
-	_, err := program.Run(1)
+	res, err := program.Run(1)
 	if err != nil {
 		logger.Fatalf("(part 1) error running program: %s", err.Error())
 	}
-	logger.Infof("(part 1) ran program. Output: %d", program.Result)
+	logger.Infof("(part 1) ran program. Output: %d", res.Result)
 
 	_, err = program.Run(5)
 	if !reflect.DeepEqual(program.InitialMemory, intMem) {
@@ -48,5 +48,5 @@ func five(cmd *cobra.Command, args []string) {
 	if err != nil {
 		logger.Fatalf("(part 2) error running program: %s", err.Error())
 	}
-	logger.Infof("(part 2) ran program. Output: %d", program.Result)
+	logger.Infof("(part 2) ran program. Output: %d", res.Result)
 }
