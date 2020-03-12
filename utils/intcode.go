@@ -340,7 +340,7 @@ func (p *Program) Run(input ...int) (*ExecutionResult, error) {
 func (p Program) RunAsync(identifier string, inputchan chan int, outputchan chan int, resultChan chan ExecutionResult) {
 
 	var lgr *log.Logger
-	lgr = log.New(os.Stdout, fmt.Sprintf("%s :", identifier), 0)
+	lgr = log.New(os.Stdout, fmt.Sprintf("%s: ", identifier), 0)
 
 	memCopy := NewMemory(p.InitialMemory)
 
