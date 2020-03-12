@@ -27,6 +27,7 @@ var (
 	down  = coord{x: 0, y: -1}
 )
 
+// PaintingRobot paints based on some intcode
 type PaintingRobot struct {
 	Direction     coord
 	Position      coord
@@ -34,6 +35,7 @@ type PaintingRobot struct {
 	VisitedCoords map[coord]color
 }
 
+// Run starts up the painting robot
 func (r *PaintingRobot) Run(p *utils.Program, startingColor color) {
 	r.Direction = up
 	r.Position = coord{x: 0, y: 0}
@@ -113,7 +115,7 @@ func renderPaint(visitedCoords map[coord]color) {
 	var minY int
 	var minX int
 
-	for crd, _ := range visitedCoords {
+	for crd := range visitedCoords {
 		// track max/minx
 		if crd.x > maxX {
 			maxX = crd.x
